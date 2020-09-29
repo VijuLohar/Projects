@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="initial-scale=1, user-scalable=no" />
+    <script src="Scripts/JSBridge.js"></script>
+    <script src="JSBridge.js"></script>    
+    <script type="text/javascript">
+
+        var _resultingReport = null;
+        var _refInvoice = null;
+        var _entInvoice = null;
+        //OnLoad funtion
+        fnLoad = function () {
+            try {
+
+                MobileCRM.bridge.enableDebug();
+                MobileCRM.bridge.enableZoom();
+
+                MobileCRM.UI.EntityForm.onCommand("custom_SendInvoice",
+                   function (EntityForm) {
+                       _entInvoice = EntityForm;
+                       try {
+                           if (isValid(EntityForm) && isValid(EntityForm.entity)) {
+                               _refInvoice = new MobileCRM.Reference(EntityForm.entity.entityName, EntityForm.entity.id, EntityForm.entity.primaryName);
+
+                               //MobileCRM.Services.DynamicsReport("32C85C59-7D04-E711-80E6-00155DB8652A", new MobileCRM.Reference("invoice", "9119E6B8-0FC3-E911-A95E-000D3AF06CD4"));
+
+                               //MobileCRM.Services.DynamicsReport.prototype.download("", "pdf",
+                               //     function (result) {
+                               //         MobileCRM.bridge.alert("Report Downloaded Successfully!");
+                               //         resultingReport = result;
+                               //         MobileCRM.Services.DynamicsReport("32C85C59-7D04-E711-80E6-00155DB8652A", new MobileCRM.Reference("invoice", "9119E6B8-0FC3-E911-A95E-000D3AF06CD4"));
+                               //     },
+                               //     function (error) {
+                               //         resultingReport = 0;
+                               //         MobileCRM.bridge.alert(error.message);
+
+                               //     });
+
+                               downloadReport("", "pdf", "32C85C59-7D04-E711-80E6-00155DB8652A", _refInvoice,
+                                    function (result) {
+                                        MobileCRM.bridge.alert("Report Downloaded Successfully!");
+                                        _resultingReport = result;
+                                        if (isValid(_resultingReport)) {
+                                            MobileCRM.bridge.alert((_resultingReport+ " "+ _refInvoice))
+                                            sendEmailWithAttachment(_resultingReport, _refInvoice);
+                                        }
+                                    },
+                                    function (error) {
+                                        _resultingReport = null;
+                                        MobileCRM.bridge.alert(error.message);
+
+                                    });
+                           }
+                       } catch (e) {
+                           MobileCRM.bridge.alert("An Error Has occurred " + e);
+                       }
+                   });
+
+            } catch (e) {
+                MobileCRM.bridge.alert("An Error Has occurred " + e);
+            }
+        };
+
+        //Funtion for downloading reports
+        downloadReport = function (fileName, format, reportId, regarding, success, failed, scope) {
+            /// <summary>Downloads the MS Dynamics report into a file.</summary>
+            /// <param name="fileName" type="String">A file name for resulting file. Leave &quot;null&quot; to let app to safely generate the file name and extension.</param>
+            /// <param name="format" type="String">One of following formats (must be supported in Dynamics): XML, CSV, PDF, MHTML, EXCELOPENXML, WORDOPENXML, IMAGE.</param>
+            /// <param name="success" type="function(location)">A callback function that is called with the full path to downloaded file.</param>
+            /// <param name="failed" type="function(errorMsg)">A callback which is called in case of error.</param>
+            /// <param name="scope" type="Object">The scope for callbacks.</param>
+            try {
+                var params = JSON.stringify({
+                    format: format || "PDF",
+                    outputFileName: fileName,
+                    outputFolder: this.outputFolder,
+                    outputFilePath: this.outputFilePath, // for internal use only
+                    reportId: reportId,
+                    regardingEntity: regarding ? regarding.entityName : null,
+                    regardingId: regarding ? regarding.id : null
+                });
+
+                //command for downloading report
+                MobileCRM.bridge.command("downloadReport", params, success, failed, scope);
+            } catch (e) {
+                MobileCRM.bridge.alert("An Error Has occurred " + e);
+            }
+        };
+
+        //Funtion for sending email
+        sendEmailWithAttachment = function (filePath, refInvoice) {
+            try {
+                var attachments = [];	/// Array of attachments to send. Element must be a full path or a reference to a note.
+                attachments.push(filePath);
+
+                var relationship = new MobileCRM.Relationship("objectid", refInvoice);
+                MobileCRM.DynamicEntity.saveDocumentBody(null, null, relationship, filePath, null, function (annotation) {
+                    ///<param name='annotation' type='MobileCRM.Reference'>Reference to nelwy created annotation.</param>
+                    MobileCRM.bridge.alert(annotation.entityName + " '" + annotation.primaryName + "' successfully saved.");
+                }, MobileCRM.bridge.alert, null);
+
+                //MobileCRM.Platform.emailWithAttachments(
+                //    "user@ifotech8.onmicrosoft.com",	/// email address
+                //    "Invoice",	/// email subject
+                //    "\nHi,\n\n Please Find Attached Invoice. \n\n Regards.\n Kabir",	 /// email body
+                //    attachments,
+                //    refInvoice, null,
+                //    function (error) {
+                //        _resultingReport = null;
+                //        MobileCRM.bridge.alert(error.message);
+
+                //    }, null);
+
+            } catch (e) {
+                MobileCRM.bridge.alert("An Error Has occurred " + e);
+            }
+
+        };
+
+        //Function for checking valid parameters
+        isValid = function (param) {
+            var functionName = "isValid: ";
+            try {
+                if ((param == null) || (param == undefined) || (param == "") || (param == "undefined")) {
+                    return false;
+                }
+                else {
+                    return true;
+                }
+
+            } catch (e) {
+                MobileCRM.bridge.alert("Error: " + e.message);
+            }
+        };
+
+
+    </script>
+</head>
+<body onload="fnLoad();">
+
+</body>
+</html>
